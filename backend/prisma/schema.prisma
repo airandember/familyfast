@@ -17,10 +17,19 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  sessions        Session[]
-  passwordResets  PasswordReset[]
-  familyMembers   FamilyMember[]
-  sentInvitations FamilyInvitation[] @relation("InvitationSender")
+  sessions              Session[]
+  passwordResets        PasswordReset[]
+  familyMembers         FamilyMember[]
+  sentInvitations       FamilyInvitation[] @relation("InvitationSender")
+  posts                 Post[]
+  comments              Comment[]
+  reactions             Reaction[]
+  milestones            Milestone[]
+  createdChallenges     Challenge[]
+  challengeParticipants ChallengeParticipant[]
+  challengeLogs         ChallengeLog[]
+  weightLogs            WeightLog[]
+  foodLogs              FoodLog[]
 }
 
 model Session {
@@ -57,6 +66,9 @@ model Family {
 
   members     FamilyMember[]
   invitations FamilyInvitation[]
+  posts       Post[]
+  milestones  Milestone[]
+  challenges  Challenge[]
 }
 
 model FamilyMember {
@@ -86,4 +98,197 @@ model FamilyInvitation {
   inviter User   @relation("InvitationSender", fields: [inviterId], references: [id], onDelete: Cascade)
 
   @@index([email])
+}
+
+// ============================================
+// FEEDS BRAID
+// ============================================
+
+model Post {
+  id        String   @id @default(uuid())
+  familyId  String
+  authorId  String
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  reactions Reaction[]
+
+  @@index([familyId, createdAt(sort: Desc)])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  emoji     String   @default("heart") // heart, thumbsup, laugh, wow, sad, celebrate
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId]) // One reaction per user per post
+}
+
+// ============================================
+// MILESTONES BRAID
+// ============================================
+
+model Milestone {
+  id          String    @id @default(uuid())
+  familyId    String
+  createdById String
+  title       String
+  description String?
+  date        DateTime
+  type        String    @default("custom") // birthday, anniversary, achievement, custom
+  recurring   Boolean   @default(false)    // Yearly recurrence for birthdays/anniversaries
+  emoji       String?
+  personName  String?   // For birthdays - whose birthday is it
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([familyId, date])
+}
+
+// ============================================
+// CHALLENGES BRAID
+// ============================================
+
+model Challenge {
+  id          String   @id @default(uuid())
+  familyId    String
+  createdById String
+  
+  // Basic info
+  name        String
+  description String?
+  emoji       String?
+  
+  // Challenge type and settings
+  type        String   @default("fasting") // fasting, exercise, custom
+  
+  // Duration
+  startDate   DateTime
+  endDate     DateTime
+  
+  // Fasting-specific settings (JSON for flexibility)
+  // For fasting: { feedingWindowStart: "12:00", feedingWindowEnd: "20:00", fastingHours: 16 }
+  settings    Json?
+  
+  // Status
+  status      String   @default("active") // draft, active, completed, cancelled
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  family       Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdBy    User                   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  participants ChallengeParticipant[]
+  logs         ChallengeLog[]
+
+  @@index([familyId, status])
+  @@index([familyId, startDate])
+}
+
+model ChallengeParticipant {
+  id          String   @id @default(uuid())
+  challengeId String
+  userId      String
+  joinedAt    DateTime @default(now())
+  status      String   @default("active") // active, completed, dropped
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+}
+
+model ChallengeLog {
+  id          String   @id @default(uuid())
+  challengeId String
+  userId      String
+  date        DateTime @db.Date // The day this log is for
+  
+  // Check-in data
+  completed   Boolean  @default(false) // Did they complete the day's goal?
+  notes       String?
+  
+  // For fasting challenges
+  fastingStatus String? // fasting, feeding, broke_fast
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  challenge Challenge  @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodLogs  FoodLog[]
+
+  @@unique([challengeId, userId, date])
+  @@index([challengeId, date])
+}
+
+// ============================================
+// HEALTH BRAID
+// ============================================
+
+model WeightLog {
+  id        String   @id @default(uuid())
+  userId    String
+  weight    Float    // Weight in user's preferred unit
+  unit      String   @default("lbs") // lbs, kg
+  date      DateTime @db.Date
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date]) // One weight entry per day
+  @@index([userId, date])
+}
+
+model FoodLog {
+  id             String   @id @default(uuid())
+  userId         String
+  challengeLogId String?  // Optional link to a challenge log
+  
+  // Food info
+  description    String
+  imageUrl       String?
+  
+  // Optional macros
+  calories       Int?
+  protein        Float?   // grams
+  carbs          Float?   // grams
+  fat            Float?   // grams
+  
+  // When they ate
+  loggedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeLog ChallengeLog? @relation(fields: [challengeLogId], references: [id], onDelete: SetNull)
+
+  @@index([userId, loggedAt])
 }

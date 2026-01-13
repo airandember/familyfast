@@ -34,15 +34,15 @@ This document defines our complete BRAID architecture, connecting frontend and b
 
 | # | Braid | Purpose | Priority | Status |
 |---|-------|---------|----------|--------|
-| 4 | **feeds** | Posts, comments, reactions | High | Planned |
-| 5 | **milestones** | Birthdays, achievements, reminders | High | Planned |
+| 4 | **feeds** | Posts, comments, reactions | High | ✅ Complete |
+| 5 | **milestones** | Birthdays, achievements, reminders | High | ✅ Complete |
 
 ### Phase 3: Health & Activity
 
 | # | Braid | Purpose | Priority | Status |
 |---|-------|---------|----------|--------|
-| 6 | **health** | Health metrics tracking & sharing | Medium | Planned |
-| 7 | **challenges** | Family competitions, goals | Medium | Planned |
+| 6 | **health** | Health metrics tracking & sharing | Medium | ✅ Complete |
+| 7 | **challenges** | Family competitions, goals | Medium | ✅ Complete |
 
 ### Phase 4: Lifestyle
 
@@ -169,74 +169,143 @@ POST   /api/families/:id/invite/regenerate  # New invite code
 
 ---
 
-### 4. FEEDS Braid (Planned)
+### 4. FEEDS Braid
 > Posts, comments, and reactions within families
 
 **Strands:**
-- `posts` - Create, read, update, delete posts
-- `comments` - Comment on posts
-- `reactions` - Like/react to posts
-- `media` - Image/video attachments
-- `notifications` - Activity notifications
+| Strand | Purpose | Status |
+|--------|---------|--------|
+| `posts` | Create, read, update, delete posts | ✅ |
+| `comments` | Comment on posts | ✅ |
+| `reactions` | Like/react to posts | ✅ |
+| `media` | Image/video attachments | Planned |
+| `notifications` | Activity notifications | Planned |
 
-**Planned Endpoints:**
+**Endpoints:**
 ```
-GET    /api/families/:id/posts
-POST   /api/families/:id/posts
-GET    /api/posts/:id
-PUT    /api/posts/:id
-DELETE /api/posts/:id
-POST   /api/posts/:id/comments
-POST   /api/posts/:id/reactions
+GET    /api/families/:id/posts      # List family posts
+POST   /api/families/:id/posts      # Create post
+GET    /api/posts/:id               # Get single post
+PATCH  /api/posts/:id               # Update post
+DELETE /api/posts/:id               # Delete post
+GET    /api/posts/:id/comments      # List comments
+POST   /api/posts/:id/comments      # Add comment
+DELETE /api/comments/:id            # Delete comment
+POST   /api/posts/:id/reactions     # Toggle reaction
 ```
 
-**Planned Tables:**
-- `posts`
-- `comments`
-- `reactions`
+**Database Tables:**
+- `posts` - Family posts with content
+- `comments` - Post comments
+- `reactions` - User reactions (heart, thumbsup, laugh, wow, sad, celebrate)
+
+**Frontend Routes:**
+- Posts displayed on `/families/[id]` family detail page
 
 ---
 
-### 5. MILESTONES Braid (Planned)
+### 5. MILESTONES Braid
 > Important dates and achievements
 
 **Strands:**
-- `birthdays` - Birthday tracking and reminders
-- `anniversaries` - Anniversary dates
-- `achievements` - Custom milestones
-- `reminders` - Notification scheduling
+| Strand | Purpose | Status |
+|--------|---------|--------|
+| `create` | Add milestones (birthday, anniversary, etc.) | ✅ |
+| `list` | View family milestones | ✅ |
+| `upcoming` | Cross-family upcoming view | ✅ |
+| `recurring` | Yearly recurring events | ✅ |
+| `reminders` | Notification scheduling | Planned |
 
-**Planned Endpoints:**
+**Endpoints:**
 ```
-GET    /api/families/:id/milestones
-POST   /api/families/:id/milestones
-PUT    /api/milestones/:id
-DELETE /api/milestones/:id
-GET    /api/milestones/upcoming
+GET    /api/families/:id/milestones   # List family milestones
+POST   /api/families/:id/milestones   # Create milestone
+GET    /api/milestones/:id            # Get milestone
+PATCH  /api/milestones/:id            # Update milestone
+DELETE /api/milestones/:id            # Delete milestone
+GET    /api/milestones/upcoming       # Upcoming across all families
 ```
+
+**Database Tables:**
+- `milestones` - Events with type, date, recurring flag, person name
+
+**Frontend Routes:**
+- Milestones displayed on `/families/[id]` sidebar
+- Upcoming milestones on `/dashboard`
 
 ---
 
-### 6. HEALTH Braid (Planned)
-> Health metrics tracking and sharing
+### 6. HEALTH Braid
+> Personal health metrics tracking
 
 **Strands:**
-- `metrics` - Weight, steps, sleep, etc.
-- `goals` - Personal health goals
-- `sharing` - Share with family members
-- `history` - Historical data and trends
+| Strand | Purpose | Status |
+|--------|---------|--------|
+| `weight` | Weight logging and trends | ✅ |
+| `food` | Food logging with macros | ✅ |
+| `summary` | Daily nutrition summary | ✅ |
+
+**Endpoints:**
+```
+POST   /api/health/weight             # Log weight
+GET    /api/health/weight             # Get weight history
+GET    /api/health/weight/trend       # Get weight trend data
+DELETE /api/health/weight/:date       # Delete weight log
+POST   /api/health/food               # Log food with macros
+GET    /api/health/food               # Get food logs
+DELETE /api/health/food/:id           # Delete food log
+GET    /api/health/food/summary/:date # Daily macro summary
+```
+
+**Database Tables:**
+- `weight_logs` - Weight entries with date, unit, notes
+- `food_logs` - Food entries with description, macros, optional challenge link
 
 ---
 
-### 7. CHALLENGES Braid (Planned)
-> Family competitions and goals
+### 7. CHALLENGES Braid
+> Family challenges with fasting support
 
 **Strands:**
-- `create` - Create challenges
-- `join` - Join challenges
-- `progress` - Track progress
-- `leaderboard` - Rankings
-- `rewards` - Challenge completion rewards
+| Strand | Purpose | Status |
+|--------|---------|--------|
+| `create` | Create fasting/exercise/custom challenges | ✅ |
+| `join` | Join and leave challenges | ✅ |
+| `logs` | Daily check-ins and progress | ✅ |
+| `participants` | View participants and leaderboard | ✅ |
+| `progress` | Track streaks and completion rates | ✅ |
+
+**Endpoints:**
+```
+POST   /api/families/:id/challenges          # Create challenge
+GET    /api/families/:id/challenges          # List family challenges
+GET    /api/challenges/:id                   # Get challenge details
+PATCH  /api/challenges/:id                   # Update challenge
+DELETE /api/challenges/:id                   # Delete challenge
+POST   /api/challenges/:id/join              # Join challenge
+POST   /api/challenges/:id/leave             # Leave challenge
+GET    /api/challenges/:id/participants      # Get participants + progress
+POST   /api/challenges/:id/logs              # Log daily check-in
+GET    /api/challenges/:id/logs              # Get logs for challenge
+```
+
+**Database Tables:**
+- `challenges` - Challenge with type, dates, fasting settings (JSON)
+- `challenge_participants` - User-challenge relationships
+- `challenge_logs` - Daily check-ins with fasting status
+
+**Fasting Settings Schema:**
+```json
+{
+  "feedingWindowStart": "12:00",
+  "feedingWindowEnd": "20:00",
+  "fastingHours": 16
+}
+```
+
+**Frontend Routes:**
+- `/families/[id]/challenges` - Challenge list and creation
+- `/families/[id]/challenges/[challengeId]` - Challenge detail with logging
 
 ---
 
@@ -321,6 +390,22 @@ mkdir -p frontend/src/routes/{braid-routes}
 - ✅ Leave family
 - ✅ Remove family member (admin only)
 - ✅ Regenerate invite code
+- ✅ Create posts in family feed
+- ✅ React to posts (6 reaction types)
+- ✅ Comment on posts
+- ✅ Delete posts/comments
+- ✅ Create milestones (birthdays, anniversaries, achievements)
+- ✅ Recurring yearly milestones
+- ✅ Upcoming milestones dashboard widget
+- ✅ Create fasting challenges (16:8, 18:6, 20:4, OMAD presets)
+- ✅ Join/leave family challenges
+- ✅ Daily challenge check-ins with fasting status
+- ✅ Challenge progress calendar
+- ✅ Challenge leaderboard with participant rankings
+- ✅ Personal weight tracking with trends
+- ✅ Food logging with macro tracking
+- ✅ Real-time feeding/fasting window indicator
+- ✅ Daily nutrition summary
 
 ### Technical Features
 - ✅ JWT authentication with refresh tokens
@@ -331,6 +416,8 @@ mkdir -p frontend/src/routes/{braid-routes}
 - ✅ Responsive design (TailwindCSS)
 - ✅ GitHub Pages deployment workflow
 - ✅ Render deployment configuration
+- ✅ Paginated feeds with "load more"
+- ✅ Relative time formatting
 
 ---
 

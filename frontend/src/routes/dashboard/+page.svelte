@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { auth, user, isAuthenticated } from '$lib/stores/auth';
 	import { families, familiesList, isFamiliesLoading } from '$lib/stores/families';
+	import { milestonesStore } from '$lib/stores/milestones';
 	import { getMonogram, getFamilyColorClasses } from '$lib/utils';
+	import { MILESTONE_TYPES } from '$lib/types';
 
 	let showCreateModal = false;
 	let showJoinModal = false;
@@ -19,7 +21,10 @@
 				goto('/login');
 				unsubscribe();
 			} else if (state.initialized && state.user) {
-				await families.loadFamilies();
+				await Promise.all([
+					families.loadFamilies(),
+					milestonesStore.loadUpcoming(30),
+				]);
 				unsubscribe();
 			}
 		});
@@ -98,17 +103,50 @@
 			<div class="card bg-gradient-to-br from-accent-500 to-accent-600 text-white">
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-accent-100 text-sm font-medium">Coming Soon</p>
-						<p class="text-lg font-bold">Challenges</p>
+						<p class="text-accent-100 text-sm font-medium">Upcoming</p>
+						<p class="text-3xl font-bold">{$milestonesStore.upcoming.length}</p>
 					</div>
 					<div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 						</svg>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<!-- Upcoming Milestones -->
+		{#if $milestonesStore.upcoming.length > 0}
+			<div class="mb-8">
+				<h2 class="font-display text-xl font-bold text-gray-900 mb-4">Upcoming Milestones</h2>
+				<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+					{#each $milestonesStore.upcoming.slice(0, 4) as milestone}
+						{@const typeInfo = MILESTONE_TYPES.find(t => t.value === milestone.type)}
+						{@const family = $familiesList.find(f => f.id === milestone.familyId)}
+						<div class="card flex items-center gap-3">
+							<div class="w-12 h-12 rounded-lg bg-gradient-to-br from-accent-100 to-accent-200 flex items-center justify-center text-xl flex-shrink-0">
+								{milestone.emoji || typeInfo?.emoji || '📅'}
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="font-medium text-gray-900 truncate">{milestone.title}</p>
+								<p class="text-sm text-gray-500">
+									{#if milestone.daysUntil === 0}
+										Today!
+									{:else if milestone.daysUntil === 1}
+										Tomorrow
+									{:else}
+										In {milestone.daysUntil} days
+									{/if}
+									{#if family}
+										<span class="text-gray-400">• {family.name}</span>
+									{/if}
+								</p>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		<!-- Actions -->
 		<div class="flex flex-wrap gap-4 mb-8">

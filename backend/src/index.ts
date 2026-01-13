@@ -5,6 +5,10 @@ import passport from 'passport';
 
 import { authRouter } from './braids/auth/routes.js';
 import { familyRouter } from './braids/family/routes.js';
+import feedsRouter from './braids/feeds/routes.js';
+import milestonesRouter from './braids/milestones/routes.js';
+import challengesRouter from './braids/challenges/routes.js';
+import healthRouter from './braids/health/routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { configurePassport } from './braids/auth/passport.js';
 
@@ -27,6 +31,10 @@ configurePassport();
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/families', familyRouter);
+app.use('/api', feedsRouter);
+app.use('/api', milestonesRouter);
+app.use('/api', challengesRouter);
+app.use('/api/health', healthRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
