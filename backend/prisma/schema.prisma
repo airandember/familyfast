@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  name          String
+  avatarUrl     String?
+  googleId      String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  passwordResets  PasswordReset[]
+  familyMembers   FamilyMember[]
+  sentInvitations FamilyInvitation[] @relation("InvitationSender")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Family {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  avatarUrl   String?
+  color       String   @default("orange") // orange, blue, purple, green, rose, amber
+  emoji       String?  // Optional emoji icon
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     FamilyMember[]
+  invitations FamilyInvitation[]
+}
+
+model FamilyMember {
+  id       String   @id @default(uuid())
+  userId   String
+  familyId String
+  role     String   @default("member") // "admin" | "member"
+  joinedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familyId])
+}
+
+model FamilyInvitation {
+  id        String    @id @default(uuid())
+  familyId  String
+  email     String?
+  inviterId String
+  status    String    @default("pending") // "pending" | "accepted" | "declined"
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+
+  family  Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  inviter User   @relation("InvitationSender", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+}
